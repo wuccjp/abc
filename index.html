@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#006d77">
+<title>痛風衛教 App v2｜先閱讀後測驗</title>
+<style>
+  :root{
+    --teal:#006d77; --teal-dark:#00494f; --teal-light:#e6f2f3;
+    --accent:#e85d2a; --green:#2e8b57; --red:#d64545;
+    --text:#263238; --muted:#6b7b80; --bg:#f4f7f8; --card:#ffffff;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+    background:var(--bg); color:var(--text);
+    max-width:480px; margin:0 auto; min-height:100dvh;
+    display:flex; flex-direction:column;
+  }
+  /* ---------- 頂部 ---------- */
+  .appbar{
+    position:sticky; top:0; z-index:10;
+    background:linear-gradient(135deg,var(--teal),var(--teal-dark));
+    color:#fff; padding:12px 16px 8px;
+    padding-top:calc(12px + env(safe-area-inset-top));
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+  }
+  .appbar h1{font-size:18px; font-weight:700; letter-spacing:.5px}
+  .appbar p{font-size:11px; opacity:.85; margin-top:2px}
+  .progresswrap{margin-top:8px}
+  .progresstext{font-size:11px; opacity:.9; display:flex; justify-content:space-between; margin-bottom:3px}
+  .progressbar{height:6px; background:rgba(255,255,255,.25); border-radius:3px; overflow:hidden}
+  .progressbar .fill{height:100%; width:0%; background:var(--accent); border-radius:3px; transition:width .4s ease}
+  /* ---------- 內容 ---------- */
+  main{flex:1; padding:14px 14px calc(90px + env(safe-area-inset-bottom))}
+  .page{display:none; animation:fade .25s ease}
+  .page.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .card{
+    background:var(--card); border-radius:var(--radius);
+    padding:16px; margin-bottom:14px;
+    box-shadow:0 1px 4px rgba(0,0,0,.07);
+  }
+  .card h2{
+    font-size:16.5px; color:var(--teal); font-weight:800;
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .card h2 .chip{
+    background:var(--teal); color:#fff; font-size:11px; font-weight:700;
+    border-radius:8px; padding:2px 8px; flex-shrink:0;
+  }
+  .card p, .card li{font-size:14.5px; line-height:1.65}
+  .card ul{padding-left:20px}
+  .card li{margin-bottom:6px}
+  .hl{color:var(--accent); font-weight:700}
+  .kpi{display:flex; gap:10px; margin-bottom:14px}
+  .kpi .box{
+    flex:1; background:var(--card); border-radius:var(--radius);
+    text-align:center; padding:12px 6px; box-shadow:0 1px 4px rgba(0,0,0,.07);
+  }
+  .kpi .num{font-size:22px; font-weight:800; color:var(--teal)}
+  .kpi .lab{font-size:11px; color:var(--muted); margin-top:2px}
+  .callout{
+    border-left:4px solid var(--accent); background:#fdf1ea;
+    border-radius:10px; padding:10px 12px; font-size:13.5px; line-height:1.6;
+    margin-top:10px;
+  }
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th,td{padding:8px 6px; border-bottom:1px solid #e3ecee; text-align:left; vertical-align:top}
+  th{color:var(--teal); font-weight:800; white-space:nowrap}
+  /* ---------- 閱讀確認 ---------- */
+  .readbox{
+    background:var(--card); border-radius:var(--radius);
+    padding:14px; margin-bottom:14px;
+    box-shadow:0 1px 4px rgba(0,0,0,.07); text-align:center;
+  }
+  .readbox .hint{font-size:12.5px; color:var(--muted); margin-bottom:10px; line-height:1.5}
+  .readbtn{
+    display:block; width:100%; background:var(--teal); color:#fff; border:none;
+    font-family:inherit; font-size:15px; font-weight:800;
+    border-radius:24px; padding:12px; cursor:pointer; transition:.2s;
+  }
+  .readbtn:disabled{background:#b9c9cc; cursor:not-allowed}
+  .readbtn:not(:disabled):active{transform:scale(.97)}
+  .readbtn.done{background:var(--green)}
+  .readbtn.done::after{content:" ✓"}
+  .scrolldown{
+    font-size:16px; color:var(--accent); font-weight:800;
+    animation:bob 1.2s ease-in-out infinite;
+  }
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+  /* ---------- 測驗鎖 ---------- */
+  .lockscreen{
+    text-align:center; padding:34px 18px;
+  }
+  .lockscreen .lockico{font-size:52px; margin-bottom:12px}
+  .lockscreen h3{font-size:18px; color:var(--teal); font-weight:800; margin-bottom:8px}
+  .lockscreen p{font-size:13.5px; color:var(--muted); line-height:1.7; margin-bottom:12px}
+  .locklist{
+    text-align:left; background:var(--card); border-radius:12px;
+    padding:12px 14px; font-size:13.5px; line-height:2; margin-bottom:14px;
+    box-shadow:0 1px 4px rgba(0,0,0,.07);
+  }
+  .locklist .ok{color:var(--green); font-weight:800}
+  .locklist .no{color:var(--muted)}
+  .goread{
+    display:inline-block; background:var(--accent); color:#fff; border:none;
+    font-family:inherit; font-size:14.5px; font-weight:700;
+    border-radius:24px; padding:10px 26px; cursor:pointer;
+  }
+  .goread:active{transform:scale(.96)}
+  /* ---------- 測驗 ---------- */
+  .qcard .qnum{
+    display:inline-block; background:var(--accent); color:#fff;
+    font-size:11.5px; font-weight:800; border-radius:8px; padding:3px 9px; margin-bottom:8px;
+  }
+  .qcard .qtext{font-size:15px; font-weight:700; line-height:1.55; margin-bottom:12px}
+  .opt{
+    display:block; width:100%; text-align:left;
+    background:var(--teal-light); border:2px solid transparent;
+    border-radius:12px; padding:11px 13px; font-size:14px;
+    margin-bottom:8px; cursor:pointer; line-height:1.5;
+    transition:.15s; font-family:inherit; color:var(--text);
+  }
+  .opt:active{transform:scale(.98)}
+  .opt.correct{background:#e4f4ea; border-color:var(--green); color:#1d5c38; font-weight:700}
+  .opt.wrong{background:#fbe9e9; border-color:var(--red); color:#8f2626}
+  .opt:disabled{cursor:default; opacity:.92}
+  .exp{
+    display:none; background:#fff7e8; border-radius:10px;
+    padding:10px 12px; font-size:13px; line-height:1.6; margin-top:4px;
+  }
+  .exp.show{display:block; animation:fade .25s ease}
+  .exp b{color:var(--accent)}
+  .scorebar{
+    background:linear-gradient(135deg,var(--teal),var(--teal-dark));
+    color:#fff; border-radius:var(--radius); padding:18px; text-align:center;
+    margin-top:14px; display:none;
+  }
+  .scorebar.show{display:block; animation:fade .3s ease}
+  .scorebar .big{font-size:34px; font-weight:800}
+  .scorebar .msg{font-size:14px; margin-top:4px; opacity:.9}
+  .btn{
+    display:inline-block; background:var(--accent); color:#fff; border:none;
+    font-family:inherit; font-size:14.5px; font-weight:700;
+    border-radius:24px; padding:10px 26px; margin-top:12px; cursor:pointer;
+  }
+  .btn:active{transform:scale(.96)}
+  .ref{font-size:11px; color:var(--muted); line-height:1.6; text-align:center; padding:4px 0 8px}
+  /* ---------- 底部導覽 ---------- */
+  .tabbar{
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:480px; z-index:10;
+    background:#fff; border-top:1px solid #e3ecee;
+    display:flex; justify-content:space-around;
+    padding:6px 0 calc(6px + env(safe-area-inset-bottom));
+    box-shadow:0 -2px 8px rgba(0,0,0,.06);
+  }
+  .tab{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:11px; color:var(--muted); cursor:pointer; flex:1; padding:4px 0;
+    border:none; background:none; font-family:inherit; position:relative;
+  }
+  .tab .ico{font-size:21px; line-height:1}
+  .tab.active{color:var(--teal); font-weight:800}
+  .tab.active .ico{transform:translateY(-1px) scale(1.08)}
+  .tab .badge{
+    position:absolute; top:0; right:50%; transform:translate(16px,-4px);
+    background:var(--red); color:#fff; font-size:9px; font-weight:800;
+    min-width:16px; height:16px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tab.locked{opacity:.45}
+  @media(min-width:481px){
+    body{border-left:1px solid #dfe8ea; border-right:1px solid #dfe8ea; box-shadow:0 0 30px rgba(0,0,0,.08)}
+  }
+  /* 完成祝賀 */
+  .unlockbanner{
+    background:linear-gradient(135deg,var(--green),#1d5c38); color:#fff;
+    border-radius:var(--radius); padding:16px; text-align:center;
+    margin-bottom:14px; display:none;
+  }
+  .unlockbanner.show{display:block; animation:fade .3s ease}
+  .unlockbanner .t{font-size:17px; font-weight:800}
+  .unlockbanner .s{font-size:12.5px; opacity:.9; margin-top:4px}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <h1>🩺 痛風衛教小百科 <span style="font-size:11px;background:rgba(255,255,255,.2);border-radius:6px;padding:2px 6px">v2</span></h1>
+  <p>痛風與高尿酸血症｜中國醫藥大學附設醫院 衛教單張</p>
+  <div class="progresswrap">
+    <div class="progresstext"><span>📖 閱讀進度</span><span id="progLabel">0 / 3 完成</span></div>
+    <div class="progressbar"><div class="fill" id="progFill"></div></div>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== 第一課：認識 ===================== -->
+  <section class="page active" id="page-l1">
+    <div class="kpi">
+      <div class="box"><div class="num">7.0</div><div class="lab">高尿酸血症 mg/dL</div></div>
+      <div class="box"><div class="num">6.0</div><div class="lab">治療目標 mg/dL</div></div>
+      <div class="box"><div class="num">5.0</div><div class="lab">有痛風石 mg/dL</div></div>
+    </div>
+    <div class="card">
+      <h2><span class="chip">定義</span>什麼是痛風？</h2>
+      <p><span class="hl">血中尿酸濃度過高</span>，引起尿酸鈉鹽結晶沉積於關節、軟骨、滑囊液、肌腱或軟組織中的發炎性疾病。</p>
+      <div class="callout">好發於<b>中年男性</b>及<b>停經後女性</b>，男性佔 90–95% 居多。</div>
+    </div>
+    <div class="card">
+      <h2><span class="chip">成因</span>病因與危險因子</h2>
+      <ul>
+        <li>肥胖、體重增加</li>
+        <li>喝酒</li>
+        <li>高血壓</li>
+        <li>使用<b>利尿劑</b></li>
+        <li>腎功能不全</li>
+        <li>家族成員曾罹患痛風（高危險群）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2><span class="chip">數據</span>台灣流行病學</h2>
+      <table>
+        <tr><th></th><th>男性</th><th>女性</th></tr>
+        <tr><td>高尿酸血症盛行率</td><td>22.0%</td><td>9.7%</td></tr>
+        <tr><td>痛風盛行率</td><td>8.21%</td><td>2.33%</td></tr>
+      </table>
+      <div class="callout">可能增加<b>全人口死亡與心血管死亡</b>的風險。</div>
+    </div>
+    <div class="readbox" id="readbox-l1">
+      <div class="hint" id="hint-l1">請<b>滑動到本頁最底部</b>閱讀完畢後，即可確認 <span class="scrolldown">⬇</span></div>
+      <button class="readbtn" id="btn-l1" disabled onclick="markRead('l1')">我已完整閱讀本頁</button>
+    </div>
+  </section>
+
+  <!-- ===================== 第二課：症狀 ===================== -->
+  <section class="page" id="page-l2">
+    <div class="card">
+      <h2><span class="chip">三期</span>臨床症狀</h2>
+      <p><b style="color:var(--teal)">① 無症狀高尿酸血症</b></p>
+      <p style="margin:4px 0 10px">需經過很長時間，才會有第一次痛風關節炎發作。</p>
+      <p><b style="color:var(--teal)">② 急性痛風性關節炎</b></p>
+      <p style="margin:4px 0 10px">突然發作，關節出現<span class="hl">紅、腫、熱、痛</span>，好發於<b>下肢關節</b>。</p>
+      <p><b style="color:var(--teal)">③ 慢性痛風石關節炎</b></p>
+      <p style="margin:4px 0 0">長期未治療者，皮下及關節產生痛風石結節，可能導致<span class="hl">關節變形</span>。</p>
+      <div class="callout">⚠ 痛風石傷口破皮應避免細菌感染，以免造成須<b>截肢</b>的併發後遺症。</div>
+    </div>
+    <div class="readbox" id="readbox-l2">
+      <div class="hint" id="hint-l2">請<b>滑動到本頁最底部</b>閱讀完畢後，即可確認 <span class="scrolldown">⬇</span></div>
+      <button class="readbtn" id="btn-l2" disabled onclick="markRead('l2')">我已完整閱讀本頁</button>
+    </div>
+  </section>
+
+  <!-- ===================== 第三課：照護 ===================== -->
+  <section class="page" id="page-l3">
+    <div class="card">
+      <h2><span class="chip">治療</span>治療原則</h2>
+      <table>
+        <tr><th>情況</th><th>處理方式</th></tr>
+        <tr><td>無症狀高尿酸血症</td><td>調整生活型態及飲食（少啤酒、烈酒、內臟、海產），尿酸維持 <b>&lt; 7</b> mg/dL</td></tr>
+        <tr><td>急性關節炎</td><td>口服<b>非類固醇消炎藥</b>和/或<b>秋水仙素</b>；必要時口服或注射<b>類固醇</b></td></tr>
+        <tr><td>大多數病人</td><td>長期服藥，目標 <b>&lt; 6</b> mg/dL</td></tr>
+        <tr><td>已有痛風石</td><td>目標 <b>&lt; 5</b> mg/dL，加速痛風石溶解</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2><span class="chip">飲食</span>飲食控制</h2>
+      <p style="margin-bottom:8px"><b style="color:var(--green)">✓ 建議</b></p>
+      <ul>
+        <li>維持<b>標準體重</b>、每日補充適當水份</li>
+        <li>多食用<b>蔬果類、豆製品及乳製品</b></li>
+        <li>黃豆、豆類、蕈菇類<b>不會</b>提高痛風風險</li>
+      </ul>
+      <p style="margin:12px 0 8px"><b style="color:var(--accent)">✗ 避免</b></p>
+      <ul>
+        <li>高嘌呤食物：內臟、紅肉、魚類、海鮮</li>
+        <li>含糖飲料與食物</li>
+        <li>酒精：啤酒、白蘭地、威士忌、高粱酒（葡萄酒風險相對較低）</li>
+      </ul>
+    </div>
+    <div class="readbox" id="readbox-l3">
+      <div class="hint" id="hint-l3">請<b>滑動到本頁最底部</b>閱讀完畢後，即可確認 <span class="scrolldown">⬇</span></div>
+      <button class="readbtn" id="btn-l3" disabled onclick="markRead('l3')">我已完整閱讀本頁</button>
+    </div>
+  </section>
+
+  <!-- ===================== 測驗 ===================== -->
+  <section class="page" id="page-quiz">
+    <div class="unlockbanner" id="unlockBanner">
+      <div class="t">🎉 測驗已解鎖！</div>
+      <div class="s">三個單元皆已閱讀完成，開始挑戰吧</div>
+    </div>
+    <div id="lockArea">
+      <div class="lockscreen">
+        <div class="lockico">🔒</div>
+        <h3>測驗尚未解鎖</h3>
+        <p>請先完整閱讀以下 3 個單元，<br>並在每頁底部點選「我已完整閱讀本頁」：</p>
+        <div class="locklist" id="lockList"></div>
+        <button class="goread" onclick="goFirstUnread()">📖 前往閱讀</button>
+      </div>
+    </div>
+    <div id="quizArea" style="display:none"></div>
+    <div class="scorebar" id="scorebar">
+      <div style="font-size:13px;opacity:.85">測驗完成</div>
+      <div class="big" id="scoreText">0 / 5</div>
+      <div class="msg" id="scoreMsg"></div>
+      <button class="btn" onclick="resetQuiz()">再測一次 🔄</button>
+    </div>
+  </section>
+
+  <!-- ===================== 關於 ===================== -->
+  <section class="page" id="page-about">
+    <div class="card">
+      <h2><span class="chip">規則</span>使用說明</h2>
+      <ul>
+        <li>需依序完成 <b>3 個單元</b>的閱讀（滑到頁面底部後點確認按鈕）</li>
+        <li>全部閱讀完成後，<b>測驗分頁自動解鎖</b></li>
+        <li>閱讀進度會自動儲存於本機</li>
+      </ul>
+      <button class="btn" style="background:var(--muted)" onclick="resetAll()">重設閱讀進度 🔄</button>
+    </div>
+    <div class="card">
+      <h2><span class="chip">來源</span>參考資料</h2>
+      <ul>
+        <li>中國醫藥大學附設醫院衛教單張「痛風與高尿酸血症」<br><span style="color:var(--muted);font-size:12px">cmuh.cmu.edu.tw/HealthEdus/Detail?no=4864</span></li>
+        <li>台灣痛風與高尿酸血症 2016 診治指引（Formosan Journal of Rheumatology, 30(2)）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p>本 App 內容整理自衛教單張，僅供衛教參考，<b>無法取代醫師診斷與治療</b>。</p>
+    </div>
+    <p class="ref">© 內容依原衛教單張整理｜僅供個人衛教使用</p>
+  </section>
+</main>
+
+<!-- ===================== 底部導覽 ===================== -->
+<nav class="tabbar">
+  <button class="tab active" data-page="l1"   onclick="go('l1')"><span class="ico">1️⃣</span>認識</button>
+  <button class="tab"        data-page="l2"   onclick="go('l2')"><span class="ico">2️⃣</span>症狀</button>
+  <button class="tab"        data-page="l3"   onclick="go('l3')"><span class="ico">3️⃣</span>照護</button>
+  <button class="tab locked" data-page="quiz" id="tabQuiz" onclick="go('quiz')"><span class="ico">📝</span>測驗</button>
+  <button class="tab"        data-page="about" onclick="go('about')"><span class="ico">ℹ️</span>關於</button>
+</nav>
+
+<script>
+/* ================= 設定 ================= */
+const LESSONS = [
+  {id:"l1", name:"單元一：認識痛風", page:"l1"},
+  {id:"l2", name:"單元二：臨床症狀", page:"l2"},
+  {id:"l3", name:"單元三：治療與飲食", page:"l3"},
+];
+const KEY = "gout_edu_v2_progress";
+
+/* ================= 狀態 ================= */
+let state = load();
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {l1:false,l2:false,l3:false} }catch(e){ return {l1:false,l2:false,l3:false} } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)) }catch(e){} }
+
+/* ================= 分頁切換 ================= */
+function go(name){
+  if (name === "quiz" && !unlocked()) {
+    renderLock();
+  }
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.page===name));
+  window.scrollTo({top:0});
+  requestAnimationFrame(checkScroll);
+}
+function goFirstUnread(){
+  const first = LESSONS.find(l => !state[l.id]);
+  go(first ? first.page : "l1");
+}
+
+/* ================= 閱讀確認（需捲動到底） ================= */
+function pageFullyScrolled(pageId){
+  const el = document.getElementById('page-'+pageId);
+  const bottom = el.getBoundingClientRect().bottom;
+  return bottom <= window.innerHeight + 8;   /* 內容底端已進入視窗 */
+}
+function checkScroll(){
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const id = active.id.replace('page-','');
+  if (!LESSONS.some(l=>l.id===id)) return;
+  const btn = document.getElementById('btn-'+id);
+  const hint = document.getElementById('hint-'+id);
+  if (state[id]) return; /* 已完成不再變動 */
+  if (pageFullyScrolled(id)) {
+    btn.disabled = false;
+    hint.innerHTML = "✅ 已滑動到底，請點選下方按鈕確認";
+  } else {
+    btn.disabled = true;
+    if (!hint.dataset.base) hint.dataset.base = hint.innerHTML;
+  }
+}
+window.addEventListener('scroll', ()=>requestAnimationFrame(checkScroll), {passive:true});
+window.addEventListener('resize', ()=>requestAnimationFrame(checkScroll));
+
+function markRead(id){
+  state[id] = true; save();
+  const btn = document.getElementById('btn-'+id);
+  btn.disabled = false; btn.classList.add('done'); btn.textContent = "已完成閱讀";
+  const hint = document.getElementById('hint-'+id);
+  hint.innerHTML = "🎉 本單元已完成！";
+  updateProgress();
+  const done = LESSONS.filter(l=>state[l.id]).length;
+  if (done < LESSONS.length) {
+    setTimeout(()=>{ go(LESSONS.find(l=>!state[l.id]).page); }, 600);
+  } else {
+    unlockCelebrate();
+  }
+}
+
+/* ================= 進度顯示 ================= */
+function doneCount(){ return LESSONS.filter(l=>state[l.id]).length }
+function unlocked(){ return doneCount() === LESSONS.length }
+function updateProgress(){
+  const n = doneCount();
+  document.getElementById('progLabel').textContent = `${n} / ${LESSONS.length} 完成`;
+  document.getElementById('progFill').style.width = (n/LESSONS.length*100)+'%';
+  LESSONS.forEach(l=>{
+    const btn = document.getElementById('btn-'+l.id);
+    if (state[l.id]) { btn.disabled=false; btn.classList.add('done'); btn.textContent="已完成閱讀";
+      document.getElementById('hint-'+l.id).innerHTML="🎉 本單元已完成！"; }
+  });
+  const tabQuiz = document.getElementById('tabQuiz');
+  tabQuiz.classList.toggle('locked', !unlocked());
+  /* badge 提示 */
+  const old = tabQuiz.querySelector('.badge'); if (old) old.remove();
+  if (unlocked()) {
+    const b = document.createElement('span'); b.className='badge'; b.textContent='開放';
+    tabQuiz.appendChild(b);
+    if (document.getElementById('quizArea').style.display==='none') renderQuizIfReady();
+  }
+}
+function unlockCelebrate(){
+  document.getElementById('unlockBanner').classList.add('show');
+  setTimeout(()=>go('quiz'), 900);
+}
+
+/* ================= 測驗 ================= */
+const QUIZ = [
+  {q:"痛風是因為下列何種物質沉積於關節等組織所引起的發炎性疾病？",
+   opts:["膽固醇結晶","尿酸鈉鹽結晶","磷酸鈣結晶","草酸鈣結晶"], ans:1,
+   exp:"血中尿酸濃度過高，尿酸鈉鹽結晶沉積於關節、軟骨、滑囊液、肌腱或軟組織所致。"},
+  {q:"痛風急性發作時，關節最常見的表現為何？",
+   opts:["關節無痛但僵硬，好發於手指","全身多處關節對稱性疼痛伴隨發燒","關節處紅、腫、熱、痛，好發於下肢關節","僅夜間關節痠麻，白天無症狀"], ans:2,
+   exp:"急性痛風突然發作時可見關節紅、腫、熱、痛，好發處為下肢關節。"},
+  {q:"關於痛風病人的血中尿酸控制目標，下列敘述何者正確？",
+   opts:["一般痛風病人目標為控制在 6 mg/dL 以下","只要低於 10 mg/dL 即可","已有痛風石者目標為 8 mg/dL 以下","尿酸值越低越好，應低於 1 mg/dL"], ans:0,
+   exp:"多數病人目標 < 6 mg/dL；已有痛風石者宜 < 5 mg/dL 以加速痛風石溶解。"},
+  {q:"痛風病人飲食控制的原則，下列何者正確？",
+   opts:["多吃內臟與海鮮補充營養","多喝啤酒以促進尿酸排泄","多食用蔬果類、豆製品及乳製品，避免酒精及含糖飲料","黃豆、豆類、蕈菇類會明顯提高痛風風險，應完全禁食"], ans:2,
+   exp:"建議多蔬果、豆製品、乳製品；避免酒精、含糖飲料及高嘌呤食物；豆類菇類不會提高風險。"},
+  {q:"急性痛風關節炎發作疼痛時，常用的治療藥物為何？",
+   opts:["口服降血糖藥","口服非類固醇消炎藥物和/或秋水仙素，必要時使用類固醇","抗生素靜脈注射","僅需冰敷，不需任何藥物治療"], ans:1,
+   exp:"常使用口服 NSAIDs 和/或秋水仙素，必要時可使用口服或注射類固醇。"},
+];
+const LETTER = ["A","B","C","D"];
+let answered, score;
+
+function renderQuizIfReady(){
+  if (!unlocked()) return;
+  document.getElementById('lockArea').style.display='none';
+  document.getElementById('quizArea').style.display='block';
+  buildQuiz();
+}
+function buildQuiz(){
+  const area = document.getElementById('quizArea');
+  area.innerHTML = ""; answered = Array(QUIZ.length).fill(false); score = 0;
+  QUIZ.forEach((item, qi) => {
+    const card = document.createElement('div');
+    card.className = 'card qcard';
+    card.innerHTML = `<span class="qnum">第 ${qi+1} 題</span>
+      <div class="qtext">${item.q}</div>`;
+    item.opts.forEach((o, oi) => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.textContent = `${LETTER[oi]}. ${o}`;
+      b.onclick = () => pick(card, qi, oi, b);
+      card.appendChild(b);
+    });
+    const exp = document.createElement('div');
+    exp.className = 'exp';
+    exp.innerHTML = `<b>解析：</b>${item.exp}`;
+    card.appendChild(exp);
+    area.appendChild(card);
+  });
+  document.getElementById('scorebar').classList.remove('show');
+}
+function pick(card, qi, oi, btn){
+  if (answered[qi]) return;
+  answered[qi] = true;
+  const buttons = card.querySelectorAll('.opt');
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    if (i === QUIZ[qi].ans) b.classList.add('correct');
+    else if (i === oi) b.classList.add('wrong');
+  });
+  if (oi === QUIZ[qi].ans) score++;
+  card.querySelector('.exp').classList.add('show');
+  if (answered.every(Boolean)) showScore();
+}
+function showScore(){
+  const bar = document.getElementById('scorebar');
+  document.getElementById('scoreText').textContent = `${score} / ${QUIZ.length}`;
+  const msg = score === 5 ? "滿分！您已完全掌握痛風衛教重點 🎉"
+            : score >= 3 ? "不錯喔！再複習一下答錯的題目 💪"
+            : "建議回到各單元複習後再挑戰一次 📖";
+  document.getElementById('scoreMsg').textContent = msg;
+  bar.classList.add('show');
+  bar.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function resetQuiz(){ buildQuiz(); window.scrollTo({top:0}); }
+
+/* ================= 鎖定畫面 ================= */
+function renderLock(){
+  const list = document.getElementById('lockList');
+  list.innerHTML = LESSONS.map(l =>
+    `<div>${state[l.id] ? '<span class="ok">✔</span>' : '<span class="no">☐</span>'} ${l.name}${state[l.id]?'（已完成）':''}</div>`
+  ).join('');
+}
+
+/* ================= 重設 ================= */
+function resetAll(){
+  if (!confirm("確定要重設所有閱讀進度嗎？重設後測驗將重新上鎖。")) return;
+  state = {l1:false,l2:false,l3:false}; save();
+  document.getElementById('unlockBanner').classList.remove('show');
+  document.getElementById('lockArea').style.display='block';
+  document.getElementById('quizArea').style.display='none';
+  LESSONS.forEach(l=>{
+    const btn = document.getElementById('btn-'+l.id);
+    btn.classList.remove('done'); btn.disabled = true; btn.textContent = "我已完整閱讀本頁";
+    const hint = document.getElementById('hint-'+l.id);
+    hint.innerHTML = hint.dataset.base || '請<b>滑動到本頁最底部</b>閱讀完畢後，即可確認 <span class="scrolldown">⬇</span>';
+  });
+  updateProgress();
+  go('l1');
+}
+
+/* ================= 初始 ================= */
+updateProgress();
+renderLock();
+if (unlocked()) renderQuizIfReady();
+checkScroll();
+</script>
+</body>
+</html>
